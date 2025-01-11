@@ -12,6 +12,7 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 20px;
   padding: 20px;
+  justify-content: center;
 }
 
 .episode-card {
@@ -22,12 +23,16 @@ body {
   overflow: hidden;
   text-align: center;
   padding: 15px;
+  max-width: 400px;
+  margin: 0 auto;
 }
 
 .episode-card img {
   width: 100%;
   height: auto;
   border-bottom: 1px solid #dee2e6;
+  max-height: 300px;
+  object-fit: cover;
 }
 
 .episode-card h2 {
