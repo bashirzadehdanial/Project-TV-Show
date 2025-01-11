@@ -1,7 +1,9 @@
 function setup() {
   const allEpisodes = getAllEpisodes();
   renderEpisodes(allEpisodes); // Render all episodes initially
-  addSearchFeature(allEpisodes); // Add the live search functionality
+  populateEpisodeSelector(allEpisodes); // Populate the episode selector
+  addSearchFeature(allEpisodes); // Add live search functionality
+  addEpisodeSelectorListener(allEpisodes); // Add event listener for episode selection
 }
 
 function renderEpisodes(episodes) {
@@ -30,6 +32,7 @@ function createContainer() {
 function createEpisodeCard(episode) {
   const card = document.createElement("div");
   card.className = "episode-card";
+  card.id = `episode-${episode.id}`; // Assign a unique ID for easy navigation
 
   const img = createEpisodeImage(episode);
   const title = createEpisodeTitle(episode);
@@ -87,6 +90,38 @@ function formatEpisodeCode(episode) {
   const season = String(episode.season).padStart(2, "0");
   const number = String(episode.number).padStart(2, "0");
   return `S${season}E${number}`;
+}
+
+// Populate the episode selector
+function populateEpisodeSelector(episodes) {
+  const episodeSelector = document.getElementById("episode-selector");
+
+  episodes.forEach((episode) => {
+    const option = document.createElement("option");
+    option.value = episode.id;
+    option.textContent = `${formatEpisodeCode(episode)} - ${episode.name}`;
+    episodeSelector.appendChild(option);
+  });
+}
+
+// Add event listener for episode selector
+function addEpisodeSelectorListener(episodes) {
+  const episodeSelector = document.getElementById("episode-selector");
+
+  episodeSelector.addEventListener("change", () => {
+    const selectedId = episodeSelector.value;
+
+    if (selectedId === "") {
+      // Show all episodes if "Show All Episodes" is selected
+      renderEpisodes(episodes);
+    } else {
+      // Filter to show only the selected episode
+      const selectedEpisode = episodes.find(
+        (episode) => episode.id === parseInt(selectedId, 10)
+      );
+      renderEpisodes([selectedEpisode]);
+    }
+  });
 }
 
 // Add live search functionality
