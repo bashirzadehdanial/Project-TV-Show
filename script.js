@@ -1,151 +1,209 @@
-// Constants and DOM Elements
-const showSelector = document.getElementById("show-selector");
-const episodeSelector = document.getElementById("episode-selector");
-const searchBar = document.getElementById("search-bar");
-const root = document.getElementById("root");
-const resultsCount = document.getElementById("results-count");
-
-// Refactored: Consolidated base URL and dynamic episode URL generation
 const API_BASE_URL = "https://api.tvmaze.com/shows";
 const getEpisodesURL = (showId) => `${API_BASE_URL}/${showId}/episodes`;
 
-// Caches for shows and episodes
+const showSearchBar = document.getElementById("show-search-bar");
+const showRoot = document.getElementById("show-root");
+const backToShowsButton = document.getElementById("back-to-shows");
+const episodeRoot = document.getElementById("episode-root");
+const showCount = document.getElementById("show-count");
+const showSelector = document.getElementById("show-selector");
+
+const ITEMS_PER_PAGE = 20;
+let currentPage = 1;
+
 let showsCache = [];
 let episodesCache = {};
 let currentEpisodes = [];
 
-// Fetch and Display Shows
 async function fetchAndDisplayShows() {
   if (!showsCache.length) {
-    showsCache = await fetchAndCacheShows(); // Refactored: Abstracted fetching logic into its own function
+    showsCache = await fetchShows();
   }
-  populateShowSelector(showsCache); // Refactored: Simplified using a helper function for populating the selector
+  renderShows(showsCache);
+  populateShowSelector(showsCache);
 }
 
-async function fetchAndCacheShows() {
-  // Refactored: New function to encapsulate fetching and sorting of shows
+async function fetchShows() {
   const response = await fetch(API_BASE_URL);
   const shows = await response.json();
   return shows.sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+    a.name.localeCompare(b.name, { sensitivity: "base" })
   );
+}
+
+function renderShows(shows) {
+  const totalPages = Math.ceil(shows.length / ITEMS_PER_PAGE);
+  const paginatedShows = paginate(shows, currentPage, ITEMS_PER_PAGE);
+
+  showCount.textContent = `Found ${shows.length} shows (Page ${currentPage} of ${totalPages})`;
+
+  showRoot.innerHTML = paginatedShows
+    .map(
+      (show) => `
+      <div class="show-card">
+        <h2 class="show-title">${show.name}</h2>
+        <div class="show-card-content">
+          <div class="show-image">
+            <img src="${show.image?.medium || "placeholder.jpg"}" alt="${
+        show.name
+      }">
+          </div>
+          <div class="show-description">
+            <p>${show.summary || "No summary available."}</p>
+          </div>
+          <div class="show-details">
+            <p><strong>Rated:</strong> <span>${
+              show.rating?.average || "N/A"
+            }</span></p>
+            <p><strong>Genres:</strong> <span>${show.genres.join(
+              " | "
+            )}</span></p>
+            <p><strong>Status:</strong> <span>${show.status}</span></p>
+            <p><strong>Runtime:</strong> <span>${
+              show.runtime || "N/A"
+            } min</span></p>
+          </div>
+        </div>
+      </div>
+    `
+    )
+    .join("");
+
+  setupPaginationControls(shows, totalPages);
+  setupShowClickListeners();
+}
+
+function paginate(items, page, itemsPerPage) {
+  const startIndex = (page - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  return items.slice(startIndex, endIndex);
+}
+
+function setupPaginationControls(shows, totalPages) {
+  const paginationControls = document.getElementById("pagination-controls");
+  if (!paginationControls) {
+    const controlsDiv = document.createElement("div");
+    controlsDiv.id = "pagination-controls";
+    controlsDiv.style.textAlign = "center";
+    controlsDiv.style.marginTop = "20px";
+    showRoot.parentNode.appendChild(controlsDiv);
+  }
+
+  const paginationControlsElement = document.getElementById(
+    "pagination-controls"
+  );
+  paginationControlsElement.innerHTML = `
+    <button id="prev-page" ${
+      currentPage === 1 ? "disabled" : ""
+    }>Previous</button>
+    <span>Page ${currentPage} of ${totalPages}</span>
+    <button id="next-page" ${
+      currentPage === totalPages ? "disabled" : ""
+    }>Next</button>
+  `;
+
+  document.getElementById("prev-page").addEventListener("click", () => {
+    if (currentPage > 1) {
+      currentPage--;
+      renderShows(shows);
+    }
+  });
+
+  document.getElementById("next-page").addEventListener("click", () => {
+    if (currentPage < totalPages) {
+      currentPage++;
+      renderShows(shows);
+    }
+  });
+}
+
+function setupShowClickListeners() {
+  document.querySelectorAll(".show-name").forEach((showName) => {
+    showName.addEventListener("click", () => {
+      const showId = showName.dataset.id;
+      fetchAndDisplayEpisodes(showId);
+      toggleView("episodes");
+    });
+  });
 }
 
 function populateShowSelector(shows) {
-  // Refactored: Using a reusable helper to dynamically create options
-  showSelector.innerHTML = createOptionsHtml(
-    shows,
-    "id",
-    "name",
-    "Select a Show"
-  );
+  showSelector.innerHTML = shows
+    .map((show) => `<option value="${show.id}">${show.name}</option>`)
+    .join("");
+
+  showSelector.addEventListener("change", () => {
+    const showId = showSelector.value;
+    if (showId) {
+      fetchAndDisplayEpisodes(showId);
+      toggleView("episodes");
+    }
+  });
 }
 
-// Fetch and Display Episodes
 async function fetchAndDisplayEpisodes(showId) {
   if (!episodesCache[showId]) {
-    episodesCache[showId] = await fetchEpisodes(showId); // Refactored: Fetching episodes now uses caching
+    episodesCache[showId] = await fetchEpisodes(showId);
   }
-  currentEpisodes = episodesCache[showId]; // Refactored: Simplified assignment for current episodes
+  currentEpisodes = episodesCache[showId];
   renderEpisodes(currentEpisodes);
-  populateEpisodeSelector(currentEpisodes); // Refactored: Dynamic selector generation moved to helper
 }
 
 async function fetchEpisodes(showId) {
-  // Refactored: Separate function to fetch episodes, improving reusability
   const response = await fetch(getEpisodesURL(showId));
   return response.json();
 }
 
-// Render Functions
 function renderEpisodes(episodes) {
-  // Refactored: Simplified rendering with template strings and a helper function
-  root.innerHTML = episodes.map(createEpisodeCardHtml).join("");
-  resultsCount.textContent = `Matching Episodes: ${episodes.length}`;
-}
-
-function createEpisodeCardHtml(episode) {
-  // Refactored: New helper function to generate episode card HTML
-  return `
-    <div class="episode-card">
-      <img src="${episode.image?.medium || "placeholder.jpg"}" alt="${
-    episode.name
-  }">
-      <h3>${episode.name} (S${String(episode.season).padStart(2, "0")}E${String(
-    episode.number
-  ).padStart(2, "0")})</h3>
-      <p>${episode.summary || "No summary available."}</p>
-    </div>
-  `;
-}
-
-function populateEpisodeSelector(episodes) {
-  // Refactored: Replaced manual DOM manipulation with a dynamic helper function
-  episodeSelector.innerHTML = createOptionsHtml(
-    episodes,
-    "id",
-    (episode) =>
-      `S${String(episode.season).padStart(2, "0")}E${String(
-        episode.number
-      ).padStart(2, "0")} - ${episode.name}`,
-    "Show All Episodes"
-  );
-}
-
-// Helper Functions
-function createOptionsHtml(items, valueKey, labelKey, defaultLabel) {
-  // Refactored: New helper function for dynamically generating <option> elements
-  const defaultOption = `<option value="">${defaultLabel}</option>`;
-  const options = items
-    .map((item) => {
-      const value = item[valueKey];
-      const label =
-        typeof labelKey === "function" ? labelKey(item) : item[labelKey];
-      return `<option value="${value}">${label}</option>`;
-    })
+  episodeRoot.innerHTML = episodes
+    .map(
+      (episode) => `
+      <div class="episode-card">
+        <img src="${episode.image?.medium || "placeholder.jpg"}" alt="${
+        episode.name
+      }">
+        <div class="episode-card-content">
+          <h3>${episode.name} (S${String(episode.season).padStart(
+        2,
+        "0"
+      )}E${String(episode.number).padStart(2, "0")})</h3>
+          <p>${episode.summary || "No summary available."}</p>
+        </div>
+      </div>`
+    )
     .join("");
-  return defaultOption + options;
 }
 
-function filterEpisodes() {
-  // Refactored: Filtering episodes now reuses rendering logic
-  const searchTerm = searchBar.value.toLowerCase();
-  const filteredEpisodes = currentEpisodes.filter(
-    (episode) =>
-      episode.name.toLowerCase().includes(searchTerm) ||
-      episode.summary.toLowerCase().includes(searchTerm)
+function toggleView(view) {
+  if (view === "shows") {
+    showRoot.style.display = "block";
+    showSearchBar.style.display = "inline-block";
+    showSelector.style.display = "inline-block";
+    episodeRoot.style.display = "none";
+    backToShowsButton.style.display = "none";
+  } else {
+    showRoot.style.display = "none";
+    showSearchBar.style.display = "none";
+    showSelector.style.display = "none";
+    episodeRoot.style.display = "block";
+    backToShowsButton.style.display = "inline-block";
+  }
+}
+
+showSearchBar.addEventListener("input", () => {
+  const searchTerm = showSearchBar.value.toLowerCase();
+  const filteredShows = showsCache.filter(
+    (show) =>
+      show.name.toLowerCase().includes(searchTerm) ||
+      show.summary.toLowerCase().includes(searchTerm) ||
+      show.genres.some((genre) => genre.toLowerCase().includes(searchTerm))
   );
-  renderEpisodes(filteredEpisodes);
-}
-
-// Event Listeners
-showSelector.addEventListener("change", () => {
-  const showId = showSelector.value;
-  if (showId) {
-    fetchAndDisplayEpisodes(showId); // Refactored: Function abstracts episode fetching and rendering
-  } else {
-    resetEpisodes(); // Refactored: New function to reset UI for no selection
-  }
+  renderShows(filteredShows);
+  setupShowClickListeners();
 });
 
-episodeSelector.addEventListener("change", () => {
-  const episodeId = episodeSelector.value;
-  if (episodeId) {
-    const selectedEpisode = currentEpisodes.find((ep) => ep.id == episodeId);
-    renderEpisodes(selectedEpisode ? [selectedEpisode] : []); // Refactored: Simplified rendering for a single episode
-  } else {
-    renderEpisodes(currentEpisodes); // Refactored: Reuse rendering for all episodes
-  }
+backToShowsButton.addEventListener("click", () => {
+  toggleView("shows");
 });
 
-searchBar.addEventListener("input", filterEpisodes);
-
-function resetEpisodes() {
-  // Refactored: New helper function to reset UI components when no show is selected
-  root.innerHTML = "";
-  episodeSelector.innerHTML = '<option value="">Show All Episodes</option>';
-  resultsCount.textContent = "";
-}
-
-// Initial Fetch
 fetchAndDisplayShows();
