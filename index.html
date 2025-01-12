@@ -2,27 +2,32 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TV Show Project</title>
-  <link href="style.css" rel="stylesheet" />
-  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TV Show Explorer allows you to browse, search, and view details about TV shows and their episodes. Enjoy detailed summaries, ratings, and more.">
+  <title>Danial TV Show - bashirzadehdanial</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 
+
 <body>
+  <div id="nav-bar">
+    <button id="back-to-shows" style="display: none;">Back to Shows</button>
+  </div>
 
-  <select id="show-selector">
-    <option value="">Select a Show</option>
-  </select>
+  <div class="header">
+    <label for="show-search-bar">Filter shows:</label>
+    <input id="show-search-bar" type="text" placeholder="Filtering for..." />
+    <span id="show-count"></span>
+    <label for="show-selector">Select a show:</label>
+    <select id="show-selector">
+      <option value="">Select a Show</option>
+    </select>
+  </div>
 
-  <input id="search-bar" type="text" placeholder="Search episodes..." />
-  <select id="episode-selector">
-    <option value="">Show All Episodes</option>
-  </select>
-  <p id="results-count"></p>
-  <div id="root"></div>
+  <div id="show-root"></div>
+  <div id="episode-root" style="display: none;"></div>
 
-  <script src="episodes.js"></script>
   <script src="script.js"></script>
 </body>
 
